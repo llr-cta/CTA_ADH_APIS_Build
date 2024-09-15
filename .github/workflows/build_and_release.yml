@@ -1,0 +1,84 @@
+name: Build CTA ADH APIs
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-22.04 ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Install prerequisites
+      shell: bash
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y python3 python3-pip cmake g++ git \
+            libzstd-dev liblz4-dev zlib1g-dev libprotobuf-dev
+
+    - name: Generate pre-installation file list
+      shell: bash
+      run: sudo find /usr -print > filelist_before.txt
+
+    - name: Checkout CTA ADH APIs
+      shell: bash
+      run: |
+        git clone --recursive git@gitlab.cta-observatory.org:cta-computing/common/acada-array-elements/adh-apis
+
+    - name: Configure CTA ADH APIs
+      shell: bash
+      run: |
+        mkdir adh-apis/build
+        cd adh-apis/build
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          -DCMAKE_INSTALL_LIBDIR=x86_64-linux-gnu \
+          -DCMAKE_PREFIX_PATH=/usr \
+          ..
+
+    - name: Build CTA ADH APIs
+      shell: bash
+      run: |
+        cd adh-apis/build
+        make -j4
+
+    - name: Install CTA ADH APIs
+      shell: bash
+      run: |
+        cd adh-apis/build
+        sudo make install
+
+    - name: Generate post-installation file list
+      shell: bash
+      run: sudo find /usr -print > filelist_after.txt
+
+    - name: Package CTA ADH APIs and dependencies in TGZ file
+      shell: bash
+      run: |
+        cat filelist_before.txt filelist_after.txt | sort | uniq -u > filelist_diff.txt
+        sudo tar -zpcf corsika8_installed.tgz --ignore-failed-read -C / -T filelist_diff.txt
+        ls -lh cta_adh_apis_installed.tgz
+
+    - name: Publish TGZ file as Github release
+      uses: softprops/action-gh-release@v2
+      with: 
+        files: cta_adh_apis_installed.tgz
+        name: "Build of CTA ADH APIs on ${{ matrix.os }}"
+        tag_name: "${{ matrix.os }}"
+        body: Automated build of CTA ADH APIs
+        prerelease: true
+
+    - name: Test CTA ADH APIs
+      shell: bash
+      run: |
+        cd cd adh-apis/build
+        make test
