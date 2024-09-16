@@ -22,7 +22,9 @@ jobs:
       shell: bash
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake build-essential libzmq3-dev libprotobuf-dev protobuf-compiler openssl
+        sudo apt-get install -y cmake build-essential libzmq3-dev openssl \
+            libz-dev libprotobuf-c-dev protobuf-c-compiler                \
+            libprotobuf-dev protobuf-compiler libprotoc-dev libzstd-dev
 
     - name: Generate pre-installation file list
       shell: bash
