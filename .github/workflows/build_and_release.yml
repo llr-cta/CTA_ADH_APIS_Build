@@ -66,6 +66,7 @@ jobs:
       shell: bash
       run: |
         cat filelist_before.txt filelist_after.txt | sort | uniq -u > filelist_diff.txt
+        ls -l `cat filelist_diff.txt`
         sudo tar -zpcf cta_adh_apis_installed.tgz --ignore-failed-read -C / -T filelist_diff.txt
         ls -lh cta_adh_apis_installed.tgz
 
